@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  background: #f8f9fb;
+  color: #1d2530;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  max-width: 720px;
+  margin: 10vh auto;
+  padding: 24px;
+}
+
+#status {
+  text-align: center;
+}
+
+#status button {
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+#experiment p {
+  line-height: 1.5;
+}

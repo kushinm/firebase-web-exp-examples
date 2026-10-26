@@ -1,0 +1,6 @@
+# The Firebase CLI's GitHub wizard creates a preview workflow; this repo deploys only live.
+.github/workflows/firebase-hosting-pull-request.yml
+.firebaserc
+firebase-debug.log
+firebase-debug.*.log
+.firebase/

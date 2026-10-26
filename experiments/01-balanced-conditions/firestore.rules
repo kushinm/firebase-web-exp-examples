@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function statePath() {
+      return /databases/$(database)/documents/experiments/01-balanced-conditions-demo;
+    }
+
+    function participantPath(uid) {
+      return /databases/$(database)/documents/experiments/01-balanced-conditions-demo/participants/$(uid);
+    }
+
+    function validIncrement(before, after, condition) {
+      return (condition == 'A' && before.a <= before.b &&
+              after.a == before.a + 1 && after.b == before.b) ||
+             (condition == 'B' && before.b <= before.a &&
+              after.b == before.b + 1 && after.a == before.a);
+    }
+
+    match /experiments/01-balanced-conditions-demo {
+      allow get: if request.auth != null;
+      allow update: if request.auth != null &&
+        resource.data.keys().hasAll(['a', 'b']) &&
+        resource.data.keys().hasOnly(['a', 'b']) &&
+        request.resource.data.keys().hasAll(['a', 'b']) &&
+        request.resource.data.keys().hasOnly(['a', 'b']) &&
+        resource.data.a is int && resource.data.b is int &&
+        resource.data.a >= 0 && resource.data.b >= 0 &&
+        !exists(participantPath(request.auth.uid)) &&
+        validIncrement(resource.data, request.resource.data,
+          getAfter(participantPath(request.auth.uid)).data.condition);
+
+      match /participants/{uid} {
+        allow get: if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null && request.auth.uid == uid &&
+          request.resource.data.keys().hasAll(['condition', 'assignedAt']) &&
+          request.resource.data.keys().hasOnly(['condition', 'assignedAt']) &&
+          request.resource.data.assignedAt == request.time &&
+          validIncrement(get(statePath()).data, getAfter(statePath()).data,
+            request.resource.data.condition);
+
+        match /results/{resultId} {
+          allow get: if request.auth != null && request.auth.uid == uid && resultId == 'final';
+          allow create: if request.auth != null && request.auth.uid == uid &&
+            resultId == 'final' &&
+            request.resource.data.keys().hasAll(['condition', 'rating', 'rtMs', 'completedAt']) &&
+            request.resource.data.keys().hasOnly(['condition', 'rating', 'rtMs', 'completedAt']) &&
+            request.resource.data.condition == get(participantPath(uid)).data.condition &&
+            request.resource.data.rating is int &&
+            request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+            request.resource.data.rtMs is int &&
+            request.resource.data.rtMs >= 0 &&
+            request.resource.data.completedAt == request.time;
+        }
+      }
+    }
+  }
+}

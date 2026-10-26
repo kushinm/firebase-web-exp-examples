@@ -1,0 +1,25 @@
+name: Deploy experiment to Firebase Hosting
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add Firebase web config
+        run: cp hosting/firebase-config.js experiments/01-balanced-conditions/src/firebase-config.js
+
+      - name: Deploy live site
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSPSYCH_FIREBASE_DEMOS }}
+          projectId: jspsych-firebase-demos
+          channelId: live

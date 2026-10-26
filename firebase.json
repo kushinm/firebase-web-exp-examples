@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "public": "experiments/01-balanced-conditions",
+    "ignore": [
+      "**/.*",
+      "**/README.md",
+      "**/*.test.mjs",
+      "**/firebase-config.example.js",
+      "firestore.rules"
+    ]
+  }
+}
