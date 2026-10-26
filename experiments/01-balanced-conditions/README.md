@@ -1,6 +1,6 @@
-# 01 — Balanced between-subjects assignment
+# 01 — Speeded word recognition
 
-This jsPsych example shows one of two descriptions of a reusable bottle, asks for a 1–5 rating, and saves the rating and response time to Firestore. Each new browser identity gets whichever condition has fewer **assignments**. Ties are broken at random.
+This jsPsych lexical decision task asks participants to press **F** for an English word and **J** for a made-up word. It has four practice trials with feedback and 12 test trials. Condition A emphasizes speed; condition B emphasizes accuracy. Each new browser identity gets whichever condition has fewer **assignments**; ties are random.
 
 ## Run it with your Firebase project
 
@@ -23,7 +23,7 @@ This jsPsych example shows one of two descriptions of a reusable bottle, asks fo
 
 7. Open [http://localhost:8000](http://localhost:8000) and complete the task. Internet access is needed to load the pinned jsPsych and Firebase browser files.
 
-Check **Firestore → Data**: `experiments/01-balanced-conditions-demo` should now have one count of `1`. Your response is under `experiments/01-balanced-conditions-demo/participants/{uid}/results/final`. Use a second browser profile to try another participant; reloading the first profile keeps its original condition and does not increase the count.
+Check **Firestore → Data**: `experiments/01-balanced-conditions-demo` should now have one count of `1`. The result is under `experiments/01-balanced-conditions-demo/participants/{uid}/results/final`. Its `trials` array stores each test item, response, reaction time in milliseconds, and correctness. Use a second browser profile to try another participant; reloading the first profile keeps its original condition and does not increase the count.
 
 If the page says **Missing or insufficient permissions**, check that the document ID in Firestore Data matches both `src/assignment.js` and the `match` path in `firestore.rules`, and that you published those rules in the project named in `src/firebase-config.js`.
 
@@ -44,7 +44,7 @@ For the lab's `jspsych-firebase-demos` project, a GitHub Action deploys this exa
 
 The workflow copies the demo's [public Firebase web config](../../hosting/firebase-config.js) into the site before deploying. The **deploy service account** remains a GitHub secret; no second secret is needed for the web config. Firestore Security Rules control data access.
 
-The workflow publishes the static experiment files, not Firestore rules. Publish changes to `firestore.rules` in the Firebase console before pushing code that needs them. To host from your own Firebase project, change the web config, project ID, and service account secret name in [the workflow](../../.github/workflows/firebase-hosting-merge.yml).
+The workflow publishes the static experiment files, not Firestore rules. Before pushing code that changes the saved data, run `firebase deploy --only firestore:rules --project jspsych-firebase-demos` from the repo root, or publish [firestore.rules](firestore.rules) in the Firebase console. To host from your own Firebase project, change the web config, project ID, and service account secret name in [the workflow](../../.github/workflows/firebase-hosting-merge.yml).
 
 The GitHub repository can be private, but the Firebase Hosting URL is public.
 
@@ -55,13 +55,14 @@ The GitHub repository can be private, but the Firebase Hosting URL is public.
 | `src/main.js` | Signs in anonymously, runs the jsPsych trials, saves the result. |
 | `src/assignment.js` | Updates counts and assignment inside a Firestore transaction. |
 | `src/choose-condition.mjs` | Chooses the least full condition; uses no external library. |
+| `src/task.mjs` | Holds the word lists and response scoring. |
 | `firestore.rules` | Allows only a participant's own assignment and result, and checks that assignment and count change together. |
 | `src/firebase-config.js` | Your local Firebase web configuration; ignored by Git. |
 
 The transaction updates the count and creates the participant's assignment together. If two new participants arrive at once, Firestore retries a conflicting transaction against the new counts. The result is saved separately after the participant answers. Participants can read the shared counts and their own documents; they cannot list other participants' responses.
 
-**Scope:** Counts track assignments, so someone who leaves before answering still occupies a slot. Anonymous sign-in identifies a browser installation, not a unique person. This browser-only example is for learning; use a trusted assignment service and a study-specific access plan before recruiting real participants.
+**Scope:** Counts track assignments, so someone who leaves before answering still occupies a slot. Anonymous sign-in identifies a browser installation, not a unique person. The short word lists are illustrative, not validated study materials. Use a trusted assignment service and a study-specific access plan before recruiting real participants.
 
-This example needs no package installation or build step. If you have Node.js, you can run the small allocation check with `node --test src/assignment.test.mjs`.
+This example needs no package installation or build step. If you have Node.js, you can run the checks with `node --test src/*.test.mjs`.
 
 See Firebase's guides to [transactions](https://firebase.google.com/docs/firestore/manage-data/transactions), [anonymous sign-in](https://firebase.google.com/docs/auth/web/anonymous-auth), and [Security Rules](https://firebase.google.com/docs/firestore/security/get-started) for more background.

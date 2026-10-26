@@ -6,7 +6,7 @@ Examples use no npm dependencies by default. The first example loads pinned jsPs
 
 ## Examples
 
-- [01 — Balanced between-subjects assignment](experiments/01-balanced-conditions/README.md)
+- [01 — Speeded word recognition with balanced conditions](experiments/01-balanced-conditions/README.md)
 
 The first example can also [deploy automatically to Firebase Hosting](experiments/01-balanced-conditions/README.md#publish-on-every-push).
 

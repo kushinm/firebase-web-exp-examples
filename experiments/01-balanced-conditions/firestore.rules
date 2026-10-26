@@ -42,13 +42,12 @@ service cloud.firestore {
           allow get: if request.auth != null && request.auth.uid == uid && resultId == 'final';
           allow create: if request.auth != null && request.auth.uid == uid &&
             resultId == 'final' &&
-            request.resource.data.keys().hasAll(['condition', 'rating', 'rtMs', 'completedAt']) &&
-            request.resource.data.keys().hasOnly(['condition', 'rating', 'rtMs', 'completedAt']) &&
+            request.resource.data.keys().hasAll(['condition', 'taskVersion', 'trials', 'completedAt']) &&
+            request.resource.data.keys().hasOnly(['condition', 'taskVersion', 'trials', 'completedAt']) &&
             request.resource.data.condition == get(participantPath(uid)).data.condition &&
-            request.resource.data.rating is int &&
-            request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
-            request.resource.data.rtMs is int &&
-            request.resource.data.rtMs >= 0 &&
+            request.resource.data.taskVersion == 2 &&
+            request.resource.data.trials is list &&
+            request.resource.data.trials.size() == 12 &&
             request.resource.data.completedAt == request.time;
         }
       }

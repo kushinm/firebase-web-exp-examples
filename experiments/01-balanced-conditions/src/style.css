@@ -23,3 +23,22 @@ main {
 #experiment p {
   line-height: 1.5;
 }
+
+.word-stimulus {
+  font-size: 3rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.key-hint {
+  font-size: 0.9rem;
+  color: #435066;
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.15em 0.4em;
+  border: 1px solid #9ba7b8;
+  border-radius: 4px;
+  background: white;
+}

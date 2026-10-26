@@ -3,8 +3,9 @@ import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/1
 import { doc, getDocFromServer, getFirestore, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { EXPERIMENT_ID, getOrAssignCondition } from "./assignment.js";
+import { PRACTICE_ITEMS, RESPONSE_DEADLINE_MS, TEST_ITEMS, scoreResponse } from "./task.mjs";
 
-const { initJsPsych, jsPsychHtmlButtonResponse } = window;
+const { initJsPsych, jsPsychHtmlButtonResponse, jsPsychHtmlKeyboardResponse } = window;
 const status = document.querySelector("#status");
 const experiment = document.querySelector("#experiment");
 
@@ -22,63 +23,107 @@ function showStatus(message, retry) {
   }
 }
 
-async function saveResult(resultRef, condition, ratingData) {
-  showStatus("Saving your response…");
+async function saveResult(resultRef, condition, trials) {
+  showStatus("Saving your responses…");
   try {
     await setDoc(resultRef, {
       condition,
-      rating: ratingData.rating,
-      rtMs: ratingData.rtMs,
+      taskVersion: 2,
+      trials,
       completedAt: serverTimestamp()
     });
-    showStatus("Done. Your response was saved.");
+    showStatus("Done. Your responses were saved.");
   } catch (error) {
     console.error("Could not save response:", error);
     // A write can commit even if the browser misses its acknowledgement.
     try {
       if ((await getDocFromServer(resultRef)).exists()) {
-        showStatus("Done. Your response was saved.");
+        showStatus("Done. Your responses were saved.");
         return;
       }
     } catch (readError) {
       console.error("Could not check saved response:", readError);
     }
-    showStatus("Your response was not confirmed. Check your connection and try again.", () => {
-      void saveResult(resultRef, condition, ratingData);
+    showStatus("Your responses were not confirmed. Check your connection and try again.", () => {
+      void saveResult(resultRef, condition, trials);
     });
   }
 }
 
 function runExperiment(condition, resultRef) {
-  let ratingData;
-  const descriptions = {
-    A: "This reusable bottle is lightweight and easy to carry.",
-    B: "This reusable bottle is sturdy and built to last."
-  };
+  let practiceFeedback = "";
+  const instruction = condition === "A"
+    ? "Focus on speed: respond as quickly as you can while trying to be correct."
+    : "Focus on accuracy: decide carefully, then respond before the 2.5-second deadline.";
   const jsPsych = initJsPsych({
     display_element: "experiment",
     on_finish: () => {
-      void saveResult(resultRef, condition, ratingData);
+      const trials = jsPsych.data.get().filter({ phase: "test" }).values().map((data, index) => ({
+        trialIndex: index + 1,
+        ...scoreResponse({ text: data.item, lexicality: data.lexicality }, data.response, data.rt)
+      }));
+      if (trials.length !== TEST_ITEMS.length) {
+        showStatus("The task ended early, so no data was saved. Please reload to try again.");
+        return;
+      }
+      void saveResult(resultRef, condition, trials);
     }
   });
 
-  const timeline = [
-    {
-      type: jsPsychHtmlButtonResponse,
-      stimulus: "<h1>Welcome</h1><p>You will read a short product description and rate its appeal.</p>",
-      choices: ["Begin"]
-    },
-    {
-      type: jsPsychHtmlButtonResponse,
-      stimulus: `<p>${descriptions[condition]}</p>`,
-      prompt: "<p>How appealing is this product? 1 = not at all, 5 = very appealing.</p>",
-      choices: ["1", "2", "3", "4", "5"],
-      data: { task: "rating", condition },
+  function fixationTrial() {
+    return {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: '<p class="word-stimulus">+</p>',
+      choices: "NO_KEYS",
+      trial_duration: 300
+    };
+  }
+
+  function wordTrial(item, phase) {
+    return {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `<p class="word-stimulus">${item.text}</p>`,
+      prompt: '<p class="key-hint"><kbd>F</kbd> = word &nbsp; <kbd>J</kbd> = not a word</p>',
+      choices: ["f", "j"],
+      trial_duration: RESPONSE_DEADLINE_MS,
+      data: { phase, item: item.text, lexicality: item.lexicality },
       on_finish: (data) => {
-        ratingData = { rating: data.response + 1, rtMs: Math.round(data.rt) };
+        const scored = scoreResponse(item, data.response, data.rt);
+        data.correct = scored.correct;
+        if (phase === "practice") {
+          practiceFeedback = scored.response === null ? "Too slow" : scored.correct ? "Correct" : "Incorrect";
+        }
       }
-    }
-  ];
+    };
+  }
+
+  const timeline = [{
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<h1>Word or not a word?</h1>
+      <p>Press <kbd>F</kbd> for an English word and <kbd>J</kbd> for a made-up word.</p>
+      <p>Each item stays on screen for up to 2.5 seconds. You will get four practice trials with feedback, then 12 test trials.</p>
+      <p>${instruction}</p>`,
+    choices: ["Start practice"]
+  }];
+
+  for (const item of jsPsych.randomization.shuffle(PRACTICE_ITEMS)) {
+    timeline.push(fixationTrial(), wordTrial(item, "practice"), {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: () => `<p>${practiceFeedback}</p>`,
+      choices: "NO_KEYS",
+      trial_duration: 600
+    });
+  }
+
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: "<p>Practice is complete. The next 12 trials will have no feedback.</p>",
+    choices: ["Start test"]
+  });
+
+  for (const item of jsPsych.randomization.shuffle(TEST_ITEMS)) {
+    timeline.push(fixationTrial(), wordTrial(item, "test"));
+  }
 
   status.hidden = true;
   experiment.hidden = false;
@@ -97,7 +142,7 @@ async function start() {
     const resultRef = doc(db, "experiments", EXPERIMENT_ID, "participants", user.uid, "results", "final");
     step = "checking for an earlier response";
     if ((await getDocFromServer(resultRef)).exists()) {
-      showStatus("You already completed this example in this browser. Your response is saved.");
+      showStatus("You already completed this example in this browser. Your responses are saved.");
       return;
     }
     runExperiment(condition, resultRef);
