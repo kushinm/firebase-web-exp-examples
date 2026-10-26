@@ -31,7 +31,7 @@ If the page says **Missing or insufficient permissions**, check that the documen
 
 For the lab's `jspsych-firebase-demos` project, a GitHub Action deploys this example to [https://jspsych-firebase-demos.web.app/](https://jspsych-firebase-demos.web.app/) whenever `master` is pushed. A maintainer needs to do this once:
 
-1. Sign in with the [Firebase CLI](https://firebase.google.com/docs/cli) using `firebase login`. From the repo root, run `firebase init hosting:github --project jspsych-firebase-demos`. Choose the GitHub repo `kushinm/firebase-web-exp-examples-Private` and `master` for live deploys. The wizard creates a deploy service account and uploads the `FIREBASE_SERVICE_ACCOUNT_JSPSYCH_FIREBASE_DEMOS` secret to GitHub. Keep this repo's `.github/workflows/firebase-hosting-merge.yml` if asked to overwrite it. The wizard also creates a pull request workflow, which this repo ignores. If its merge workflow includes `npm ci`, restore the version in this repo; the experiment has no build step.
+1. Sign in with the [Firebase CLI](https://firebase.google.com/docs/cli) using `firebase login`. From the repo root, run `firebase init hosting:github --project jspsych-firebase-demos`. Choose the GitHub repo `kushinm/firebase-web-exp-examples` and `master` for live deploys. The wizard creates a deploy service account and uploads the `FIREBASE_SERVICE_ACCOUNT_JSPSYCH_FIREBASE_DEMOS` secret to GitHub. Keep this repo's `.github/workflows/firebase-hosting-merge.yml` if asked to overwrite it. The wizard also creates a pull request workflow, which this repo ignores. If its merge workflow includes `npm ci`, restore the version in this repo; the experiment has no build step.
 2. Commit and push this repo's files to `master`:
 
    ```bash
